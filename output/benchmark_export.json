@@ -1,0 +1,36 @@
+{
+  "player_detector": {
+    "pytorch": {
+      "avg_latency_ms": 136.87,
+      "fps": 7.31,
+      "min_latency_ms": 126.95,
+      "max_latency_ms": 148.54,
+      "n_frames": 60
+    },
+    "onnxruntime": {
+      "avg_latency_ms": 111.53,
+      "fps": 8.97,
+      "min_latency_ms": 104.15,
+      "max_latency_ms": 127.44,
+      "n_frames": 60
+    },
+    "onnx_speedup_x": 1.23
+  },
+  "court_keypoint_detector": {
+    "pytorch": {
+      "avg_latency_ms": 144.96,
+      "fps": 6.9,
+      "min_latency_ms": 135.76,
+      "max_latency_ms": 156.54,
+      "n_frames": 60
+    },
+    "onnxruntime": {
+      "avg_latency_ms": 125.05,
+      "fps": 8.0,
+      "min_latency_ms": 108.61,
+      "max_latency_ms": 202.6,
+      "n_frames": 60
+    },
+    "onnx_speedup_x": 1.16
+  }
+}

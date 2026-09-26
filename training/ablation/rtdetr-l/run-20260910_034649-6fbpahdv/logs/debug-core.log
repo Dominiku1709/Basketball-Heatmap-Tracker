@@ -1,0 +1,17 @@
+{"time":"2026-09-10T03:17:26.568390318Z","level":"INFO","msg":"main: starting server","port-filename":"/tmp/tmp1i_5qa3q/port-58.txt","pid":58,"detached":false,"idle-timeout":600000000000,"log-level":0,"disable-analytics":false,"shutdown-on-parent-exit":false,"enable-dcgm-profiling":false}
+{"time":"2026-09-10T03:17:26.579302132Z","level":"INFO","msg":"server: will exit if parent process dies","ppid":58}
+{"time":"2026-09-10T03:17:26.579284525Z","level":"INFO","msg":"server: accepting connections","addr":{"Name":"/tmp/wandb-58-135-1201342953/socket","Net":"unix"}}
+{"time":"2026-09-10T03:17:26.749427773Z","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"1(@)"}
+{"time":"2026-09-10T03:17:26.76532293Z","level":"INFO","msg":"handleInformInit: received","streamId":"bd3qajt6","id":"1(@)"}
+{"time":"2026-09-10T03:17:27.20987215Z","level":"INFO","msg":"handleInformInit: stream started","streamId":"bd3qajt6","id":"1(@)"}
+{"time":"2026-09-10T03:17:38.848023106Z","level":"INFO","msg":"connection: cancelling request","id":"1(@)","requestId":"2ar8uerbyov1"}
+{"time":"2026-09-10T03:45:19.264226991Z","level":"INFO","msg":"connection: cancelling request","id":"1(@)","requestId":"2ar8uerbyov1"}
+{"time":"2026-09-10T03:45:19.944336953Z","level":"INFO","msg":"connection: cancelling request","id":"1(@)","requestId":"2ar8uerbyov1"}
+{"time":"2026-09-10T03:45:19.946856315Z","level":"INFO","msg":"handleInformFinish: finish message received","streamId":"bd3qajt6","id":"1(@)"}
+{"time":"2026-09-10T03:45:19.950825549Z","level":"INFO","msg":"handleInformFinish: stream closed","streamId":"bd3qajt6","id":"1(@)"}
+{"time":"2026-09-10T03:46:49.467989798Z","level":"INFO","msg":"handleInformInit: received","streamId":"6fbpahdv","id":"1(@)"}
+{"time":"2026-09-10T03:46:49.607968896Z","level":"INFO","msg":"handleInformInit: stream started","streamId":"6fbpahdv","id":"1(@)"}
+{"time":"2026-09-10T03:46:56.669043976Z","level":"INFO","msg":"connection: cancelling request","id":"1(@)","requestId":"r9flysqwmj8m"}
+{"time":"2026-09-10T03:46:57.290158388Z","level":"INFO","msg":"connection: cancelling request","id":"1(@)","requestId":"r9flysqwmj8m"}
+{"time":"2026-09-10T03:46:57.294869396Z","level":"INFO","msg":"handleInformFinish: finish message received","streamId":"6fbpahdv","id":"1(@)"}
+{"time":"2026-09-10T03:46:57.299756725Z","level":"INFO","msg":"handleInformFinish: stream closed","streamId":"6fbpahdv","id":"1(@)"}

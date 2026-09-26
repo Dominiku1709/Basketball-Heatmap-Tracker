@@ -1,0 +1,6 @@
+{
+  "name": "Basketball Heatmap Tracking",
+  "description": "Simple sports video analytics interface with video upload, preview widget, tracking result video, court heatmaps, and tracking history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

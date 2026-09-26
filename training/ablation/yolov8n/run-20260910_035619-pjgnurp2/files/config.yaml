@@ -1,0 +1,77 @@
+_wandb:
+    value:
+        cli_version: 0.26.1
+        e:
+            ow9tn20f5z8qkiovonpw1txhbokrirxh:
+                codePath: kaggle.ipynb
+                cpu_count: 2
+                cpu_count_logical: 4
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "8656922775552"
+                        used: "7554437775360"
+                email: traincolab20@gmail.com
+                executable: /usr/bin/python3
+                gpu: Tesla T4
+                gpu_count: 2
+                gpu_nvidia:
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-a15a5245-9ee7-70ce-bee8-809ccfbe0d6b
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-2370b6b3-8699-48e5-cda9-5130f0c45702
+                host: 4c2d826fa4b1
+                memory:
+                    total: "33659383808"
+                os: Linux-6.12.90+-x86_64-with-glibc2.35
+                program: kaggle.ipynb
+                python: CPython 3.12.13
+                root: /kaggle/working
+                startedAt: "2026-09-10T03:56:19.419470Z"
+                writerId: ow9tn20f5z8qkiovonpw1txhbokrirxh
+        m: []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 1
+                - 41
+                - 49
+                - 80
+            "2":
+                - 1
+                - 30
+                - 41
+                - 49
+                - 80
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.13
+            "5": 0.26.1
+            "8":
+                - 1
+                - 2
+                - 12
+            "12": 0.26.1
+            "13": linux-x86_64
+batch:
+    value: 32
+epochs:
+    value: 50
+imgsz:
+    value: 640
+mixup:
+    value: 0.1
+model:
+    value: yolov8n
+mosaic:
+    value: 1
+seed:
+    value: 42

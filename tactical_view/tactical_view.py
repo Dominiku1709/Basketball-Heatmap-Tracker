@@ -58,12 +58,14 @@ class TacticalViewConverter:
         """
         Validate detected keypoints by comparing distances between points
         against expected court proportions to filter out invalid detections.
+
+        `keypoints_list` is a list of plain (N, 2) numpy arrays — the format
+        CourtKeypointDetector.get_court_keypoints() actually returns.
         """
         keypoints_list = deepcopy(keypoints_list)
 
         for frame_idx, frame_keypoints in enumerate(keypoints_list):
-            # Convert keypoints to list of coordinate pairs for easier processing
-            frame_keypoints = frame_keypoints.xy.tolist()[0]
+            frame_keypoints = np.asarray(frame_keypoints)
 
             # Indices of keypoints that have positive coordinates (likely detected)
             detected_indices = [i for i, kp in enumerate(frame_keypoints) if kp[0] > 0 and kp[1] > 0]
@@ -102,45 +104,62 @@ class TacticalViewConverter:
 
                     # If error is too high, mark the keypoint as invalid
                     if error > 0.8:  # 80% margin
-                        keypoints_list[frame_idx].xy[0][i] *= 0
-                        keypoints_list[frame_idx].xyn[0][i] *= 0
+                        frame_keypoints[i] = 0
                         invalid_keypoints.append(i)
-        
+
+            keypoints_list[frame_idx] = frame_keypoints
+
         return keypoints_list
 
     def transform_players_to_tactical_view(self, keypoints_list, player_tracks):
         """
         Transform player positions from camera view to tactical (top-down) court coordinates
         by computing homography from detected keypoints.
+
+        Also reports, per frame, whether homography was actually computed
+        (`homography_valid`) — a player_id missing from `tactical_positions`
+        on a frame with `homography_valid[frame_idx] == True` is a real
+        "outside the court" exclusion; on a frame where homography itself
+        couldn't be estimated, ALL players are (correctly) absent and that
+        must not be read as "everyone was off-court". Callers that want to
+        filter on-court players (see main.py) need this distinction to
+        avoid hiding every player whenever keypoint detection has a bad
+        frame.
+
+        Returns:
+            tactical_player_positions: list[dict[player_id, [x, y]]]
+            homography_valid: list[bool]
         """
         tactical_player_positions = []
-        
+        homography_valid = []
+
         for frame_idx, (frame_keypoints, frame_tracks) in enumerate(zip(keypoints_list, player_tracks)):
             tactical_positions = {}
 
-            # Convert keypoints to list format
-            frame_keypoints = frame_keypoints.xy.tolist()[0]
+            frame_keypoints = np.asarray(frame_keypoints)
 
             if frame_keypoints is None or len(frame_keypoints) == 0:
                 tactical_player_positions.append(tactical_positions)
+                homography_valid.append(False)
                 continue
-            
+
             # Identify valid keypoints (with positive coordinates) for homography calculation
             valid_indices = [i for i, kp in enumerate(frame_keypoints) if kp[0] > 0 and kp[1] > 0]
 
             # Need at least 4 points for a reliable homography estimation
             if len(valid_indices) < 4:
                 tactical_player_positions.append(tactical_positions)
+                homography_valid.append(False)
                 continue
-            
+
             # Prepare source and destination points for homography
             source_points = np.array([frame_keypoints[i] for i in valid_indices], dtype=np.float32)
             target_points = np.array([self.key_points[i] for i in valid_indices], dtype=np.float32)
-            
+
             try:
                 # Compute homography matrix mapping camera view to tactical view
                 homography = Homography(source_points, target_points)
-                
+
                 for player_id, player_data in frame_tracks.items():
                     bbox = player_data["bbox"]
                     # Extract player's foot position from bounding box
@@ -154,12 +173,14 @@ class TacticalViewConverter:
                         continue
 
                     tactical_positions[player_id] = [x, y]
-                    
+
             except (ValueError, cv2.error):
                 # In case homography computation fails, return empty positions for this frame
                 tactical_player_positions.append(tactical_positions)
+                homography_valid.append(False)
                 continue
-            
+
             tactical_player_positions.append(tactical_positions)
-        
-        return tactical_player_positions
+            homography_valid.append(True)
+
+        return tactical_player_positions, homography_valid

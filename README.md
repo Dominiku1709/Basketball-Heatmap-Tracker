@@ -1,83 +1,149 @@
-# 🏀 AI-Powered Basketball Game Analyzer (v1)
+# 🏀 Basketball Player Tracking & Heatmap Analysis
 
-> **Personalized & Complete Version of an Academic Project**  
-> 🔁 Rewritten, restructured, and integrated from scratch by Hana FEKI
+Theo dõi từng cầu thủ bóng rổ xuyên suốt video broadcast (chịu được camera
+pan + occlusion) và sinh heatmap workrate — theo từng cầu thủ và từng đội
+— ánh xạ lên toạ độ sân thực (không phải toạ độ pixel thô).
 
----
+> Dự án này là bài mini-project cuối module Computer Vision, được adapt từ
+> repo gốc [HanaFEKI/AI_BasketBall_Analysis_v1](https://github.com/HanaFEKI/AI_BasketBall_Analysis_v1)
+> theo hướng thu hẹp phạm vi (chỉ giữ 2 chức năng: tracking + heatmap, bỏ
+> ball detection/pass/possession) — xem `PRD_CLAUDE_CODE.md` và
+> `DISCOVERY_REPORT.md` để biết đầy đủ lý do/quá trình adapt.
 
-## 🎥 Demo Video
-
-![Demo of AI-Powered Basketball Game Analyzer](output_videos/Video_1_output.gif)
-
-
----
-
-## 📘 Project Context
-
-This project was initially part of a **group academic project at ENSTA Paris** during the 2024–2025 academic year. We were a team of **10 students**, split into **5 subgroups**, each responsible for a specific part of the system (detection, tracking, analytics, etc.).
-
-Due to tight academic deadlines and the distributed nature of the work, the project:
-- Was not fully completed
-- Had parts that remained unintegrated
-- Lacked a unified and polished implementation
+**Tài liệu liên quan**: [`REPORT.md`](REPORT.md) (báo cáo đầy đủ 7 mục —
+problem statement, data, training, evaluation, feedback loop, ý tưởng
+riêng, deployment) · [`ARCHITECTURE.md`](ARCHITECTURE.md) (sơ đồ kiến
+trúc + luồng xử lý).
 
 ---
 
-## ❤️ Why This Version Exists (v1)
+## Chức năng chính
 
-As I was **deeply passionate** about the topic, I decided to **rebuild the entire system from A to Z** by myself:
-- Rewriting every component
-- Organizing everything into a single, consistent pipeline
-- Fixing bugs and improving the original implementation
-- Adding missing features and enhancements
-
-> 📁 The original version (v0) is available here: [Version 0 - GitHub Repo](https://github.com/HanaFEKI/AI_BasketBall_Analysis_v0)
-
-> ✅ This repository is the **personalized, cleaned-up, and extended version (v1)**.
+1. **Track từng cầu thủ** — YOLOv8m + BoT-SORT (Camera Motion Compensation
+   + Re-ID), ID nhất quán xuyên suốt clip.
+2. **Heatmap workrate** — per-player (composite: heatmap + ảnh crop cầu
+   thủ) và per-team, ánh xạ toạ độ sân thực qua homography (từ court
+   keypoint model YOLOv8m-pose).
+3. **Web demo** — FastAPI backend + React UI, upload video → xem video
+   output + heatmap thật ngay trên trình duyệt.
 
 ---
 
-## ⚙️ How It Works
+## 1. Cài đặt môi trường
 
-This system analyzes basketball games from video using computer vision and AI:
+Dùng conda (khuyến nghị, tránh xung đột với các project Python khác trên
+máy — xem lý do cụ thể ở `DISCOVERY_REPORT.md`):
 
-1. **🎯 Object Detection (YOLO)**  
-   Detect players and the basketball in each frame.
+```cmd
+conda create -n basketball-ai python=3.11 -y
+conda activate basketball-ai
+cd /d <đường-dẫn-tới-repo>
+pip install -r requirements.txt
+```
 
-2. **🧭 Object Tracking (ByteTrack)**  
-   Track players and the ball across video frames.
+## 2. Cấu hình model weight
 
-3. **🎨 Team Classification (Zero-Shot with Hugging Face)**  
-   Automatically assign players to teams based on jersey colors using a zero-shot image classifier powered by [Fashion CLIP](https://huggingface.co/patrickjohncyh/fashion-clip).
+Model weight (`.pt`) **không nằm trong repo** (file lớn, xem `.gitignore`).
+Copy `.env.example` thành `.env` rồi trỏ đúng đường dẫn weight cục bộ của
+bạn:
 
-5. **📍 Court Keypoint Detection**  
-   Detect basketball court landmarks using a keypoint detection model trained on a labeled dataset.
+```
+PLAYER_WEIGHT_PATH="đường/dẫn/tới/player_detector/best.pt"
+COURT_WEIGHT_PATH="đường/dẫn/tới/court_keypoint/best.pt"
+MODEL_FORMAT="pt"   # hoặc "onnx" sau khi export (mục 5)
+```
 
-6. **🔄 Perspective Transformation**  
-   Convert broadcast view into a **top-down tactical map** using homography and real-world court dimensions.
+Nếu chưa có weight: xem mục 3 (huấn luyện lại) hoặc liên hệ để lấy weight
+đã train sẵn (yolov8m player detector, yolov8m-pose court keypoint — số
+liệu train thật ở `REPORT.md` mục 3).
 
-7. **📊 Analytics**  
-   - Count **passes** and **interceptions**  
-   - Compute **ball possession** percentage  
-   - **Speed and Distance Calculation**
+## 3. Huấn luyện lại (tuỳ chọn — pipeline đã có weight sẵn thì bỏ qua)
 
-> ⚠️ To keep the video output uncluttered and visually clear, **speed and distance metrics are not drawn directly on the video frames**. Instead, they are computed separately and saved for further analysis or plotting.
+Notebook mẫu (khung quy trình, cần điền API key Roboflow thật):
+- [`training/player_detection_train.ipynb`](training/player_detection_train.ipynb)
+- [`training/keypoint_court_train.ipynb`](training/keypoint_court_train.ipynb)
+
+Huấn luyện thật của model đang dùng trong pipeline được chạy trên Kaggle
+(2× Tesla T4) — hyperparameter, log train theo epoch, kết quả mAP đầy đủ ở
+`REPORT.md` mục 3. Kết quả train (`results.csv`, `args.yaml`, confusion
+matrix, PR curve...) nằm ở `training/result/weight/player/` và
+`training/result/weight/pose/`.
+
+## 4. Chạy pipeline (CLI)
+
+```cmd
+conda activate basketball-ai
+python main.py input_videos/video_1.mp4
+```
+
+Kết quả: mỗi lần chạy tạo 1 folder mới `output/run_N/` gồm video output đã
+annotate (H.264, xem được trên browser), heatmap PNG (per-player composite
++ per-team) và `run_info.json` (thống kê + đường dẫn).
+
+Lần chạy đầu cho mỗi video sẽ chậm (phải detect+track toàn bộ); các lần
+sau tái dùng cache trong `stubs/<tên_video>/` nên nhanh hơn nhiều. Đổi
+video khác bằng cách đổi đường dẫn tham số.
+
+## 5. Export ONNX + đổi backend suy luận
+
+```cmd
+python scripts/export_onnx.py
+python scripts/benchmark_export.py --video input_videos/video_1.mp4
+```
+
+`export_onnx.py` xuất cả player detector + court keypoint model sang ONNX
+(lưu cạnh file `.pt` gốc). Đặt `MODEL_FORMAT="onnx"` trong `.env` để
+pipeline tự chuyển sang dùng bản ONNX (tự fallback về `.pt` nếu chưa
+export) — không cần sửa code. `benchmark_export.py` đo latency/FPS thật
+PyTorch vs ONNXRuntime, kết quả lưu `output/benchmark_export.json` (số
+liệu thật đã có sẵn trong `REPORT.md` mục 7).
+
+## 6. Chạy web demo (backend + frontend)
+
+Mở 2 cửa sổ terminal riêng:
+
+```cmd
+:: Terminal 1 — backend
+conda activate basketball-ai
+uvicorn api.app:app --reload --port 8000
+```
+
+```cmd
+:: Terminal 2 — frontend
+cd UI
+npm install
+npm run dev
+```
+
+Mở trình duyệt vào `http://localhost:3000`, upload video, bấm "Process
+Video" — chạy pipeline thật qua API (`POST /analyze` → poll
+`GET /jobs/{id}`), hiển thị video/heatmap output thật (không phải số liệu
+giả). Swagger UI của backend: `http://127.0.0.1:8000/docs`.
 
 ---
 
-## 🧗‍♀️ Challenges Faced
+## Cấu trúc thư mục (tóm tắt — chi tiết xem `ARCHITECTURE.md`)
 
-- **Video Quality:** Variability in broadcast footage resolution and lighting made detection and tracking difficult.  
-- **Homography Estimation:** Accurate court perspective transformation required fine-tuning and was time-consuming.  
-- **Ball Handler Identification:** Distinguishing the player with ball possession posed significant complexity.  
-- **YOLO Model Selection:** Choosing and training the best object detection models took extensive experimentation.
+```
+main.py                CLI entry point (gọi pipeline.py)
+pipeline.py             Logic xử lý chính, dùng chung cho CLI + API
+api/                    FastAPI backend (web demo)
+UI/                     React frontend (web demo)
+trackers/               PlayerTracker (YOLOv8m + BoT-SORT)
+Court_keypoint_detection/  CourtKeypointDetector (YOLOv8m-pose)
+team_assigner/           TeamAssigner (K-means màu áo)
+tactical_view/           Homography — pixel video → toạ độ sân thực
+heatmap/                 HeatmapGenerator (per-player composite + per-team)
+drawers/                 Vẽ overlay lên video output
+utils/                   Tiện ích dùng chung (video I/O, run folder, bbox)
+configs/                 Cấu hình tập trung (đường dẫn weight, màu team...)
+scripts/                 export_onnx.py, benchmark_export.py
+training/                Notebook + script train, kết quả train thật
+```
 
----
+## Hạn chế đã biết (trung thực, không giấu)
 
-## 🚀 Future Work & Perspectives
-
-- Implement **OCR for jersey number recognition** to reliably identify players.  
-- Improve **player re-identification** across multiple cameras or games.  
-- Enhance **event detection**, including fouls, shots, and rebounds.
-
----
+Tracker (BoT-SORT) vẫn còn fragment ID trong các pha chuyển động nhanh +
+camera pan đồng thời — đã thử 3 hướng cải thiện (buffer/threshold/ReID
+model thật), cải thiện ~10%, chưa giải quyết tận gốc. Chi tiết phân tích
+lỗi + bằng chứng trực quan (ảnh thật từng frame): `REPORT.md` mục 4–5.

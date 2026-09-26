@@ -1,0 +1,78 @@
+_wandb:
+    value:
+        cli_version: 0.26.1
+        e:
+            pwvkvgjmhbb9vyzwxdz8t7a9z4yr4x2u:
+                codePath: kaggle.ipynb
+                cpu_count: 2
+                cpu_count_logical: 4
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "8656922775552"
+                        used: "7554453225472"
+                email: traincolab20@gmail.com
+                executable: /usr/bin/python3
+                gpu: Tesla T4
+                gpu_count: 2
+                gpu_nvidia:
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-edfcd4d1-6e93-0dbc-ded6-1bc55a2b578a
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-6812d6b7-971c-b9c1-0113-6896e26e017c
+                host: 668115fccbe3
+                memory:
+                    total: "33659379712"
+                os: Linux-6.12.90+-x86_64-with-glibc2.35
+                program: kaggle.ipynb
+                python: CPython 3.12.13
+                root: /kaggle/working
+                startedAt: "2026-09-10T03:46:49.456827Z"
+                writerId: pwvkvgjmhbb9vyzwxdz8t7a9z4yr4x2u
+        m: []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 1
+                - 30
+                - 41
+                - 49
+                - 80
+            "2":
+                - 1
+                - 30
+                - 41
+                - 49
+                - 80
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.13
+            "5": 0.26.1
+            "8":
+                - 1
+                - 2
+                - 12
+            "12": 0.26.1
+            "13": linux-x86_64
+batch:
+    value: 16
+epochs:
+    value: 50
+imgsz:
+    value: 640
+mixup:
+    value: 0.1
+model:
+    value: rtdetr-l
+mosaic:
+    value: 1
+seed:
+    value: 42

@@ -1,98 +1,133 @@
-from PIL import Image
-import cv2
-from transformers import CLIPProcessor, CLIPModel
+"""
+team_assigner.py
 
-import sys 
-sys.path.append('../')
+Assigns each tracked player to one of 2 teams by clustering jersey color
+with K-means, instead of the original zero-shot Fashion CLIP classifier.
+No external model download, no internet dependency, and much cheaper per
+frame — trades off some robustness to lighting/viewing-angle variation
+versus CLIP.
+"""
+
+import sys
+from typing import Dict, List, Optional
+
+import numpy as np
+from sklearn.cluster import KMeans
+
+sys.path.append("../")
 from utils import read_stub, save_stub
 
 
 class TeamAssigner:
-    def __init__(self,
-                 team_1_class_name="white shirt",
-                 team_2_class_name="dark blue shirt",
-                 ):
+    def __init__(self, n_teams: int = 2):
+        self.n_teams = n_teams
+        self.kmeans: Optional[KMeans] = None
+        self.player_team_dict: Dict[int, int] = {}
+
+    def _get_jersey_pixels(self, frame, bbox) -> Optional[np.ndarray]:
         """
-        Initialize the TeamAssigner with specified team jersey descriptions.
+        Crop the upper half of a player's bounding box (torso/jersey area,
+        avoids shorts and the court background below the player's waist).
         """
-        self.team_colors = {}
-        self.player_team_dict = {}        
+        x1, y1, x2, y2 = map(int, bbox)
+        crop = frame[y1:y2, x1:x2]
+        if crop.size == 0:
+            return None
 
-        self.team_1_class_name = team_1_class_name
-        self.team_2_class_name = team_2_class_name
+        torso = crop[: max(1, int(crop.shape[0] * 0.5)), :]
+        # float64: sklearn's compiled KMeans lloyd_iter_chunked_dense expects
+        # 'const double' buffers — float32 raises a dtype mismatch at predict().
+        pixels = torso.reshape(-1, 3).astype(np.float64)
+        return pixels if len(pixels) >= 2 else None
 
-    def load_model(self):
+    def _dominant_jersey_color(self, pixels: Optional[np.ndarray]) -> Optional[np.ndarray]:
         """
-        Loads the pre-trained vision model for jersey color classification.
+        Splits the cropped torso region into 2 color clusters (jersey vs.
+        background/skin) and returns the cluster center that is NOT the
+        one dominating the crop's corners (a cheap background heuristic —
+        corners of a tight player crop are usually background, not jersey).
         """
-        self.model = CLIPModel.from_pretrained("patrickjohncyh/fashion-clip")
-        self.processor = CLIPProcessor.from_pretrained("patrickjohncyh/fashion-clip")
+        if pixels is None:
+            return None
 
-    def get_player_color(self, frame, bbox):
+        clustering = KMeans(n_clusters=2, n_init=3, random_state=42).fit(pixels)
+        labels = clustering.labels_
+
+        corner_labels = [labels[0], labels[-1]]
+        bg_label = max(set(corner_labels), key=corner_labels.count)
+        jersey_label = 1 - bg_label
+
+        return clustering.cluster_centers_[jersey_label]
+
+    def _fit_team_clusters(self, dominant_colors: np.ndarray) -> None:
         """
-        Analyzes the jersey color of a player within the given bounding box.
+        Fits a top-level KMeans over all players' dominant jersey colors,
+        splitting them into `n_teams` groups. Called once, on the first
+        frame with enough players to calibrate against.
         """
-        image = frame[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]
+        self.kmeans = KMeans(n_clusters=self.n_teams, n_init=10, random_state=42)
+        self.kmeans.fit(dominant_colors)
 
-        # Convert to PIL Image
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        pil_image = Image.fromarray(rgb_image)
-        image = pil_image
-
-        classes = [self.team_1_class_name, self.team_2_class_name]
-
-        inputs = self.processor(text=classes, images=image, return_tensors="pt", padding=True)
-
-        outputs = self.model(**inputs)
-        logits_per_image = outputs.logits_per_image
-        probs = logits_per_image.softmax(dim=1)
-
-        class_name = classes[probs.argmax(dim=1)[0]]
-
-        return class_name
-
-    def get_player_team(self, frame, player_bbox, player_id):
+    def get_player_teams_across_frames(
+        self,
+        video_frames: List,
+        player_tracks: List[Dict[int, Dict[str, List[float]]]],
+        read_from_stub: bool = False,
+        stub_path: Optional[str] = None,
+    ) -> List[Dict[int, int]]:
         """
-        Gets the team assignment for a player, using cached results if available.
-        """
-        if player_id in self.player_team_dict:
-            return self.player_team_dict[player_id]
-
-        player_color = self.get_player_color(frame, player_bbox)
-
-        team_id = 2
-        if player_color == self.team_1_class_name:
-            team_id = 1
-
-        self.player_team_dict[player_id] = team_id
-        return team_id
-
-    def get_player_teams_across_frames(self, video_frames, player_tracks, read_from_stub=False, stub_path=None):
-        """
-        Processes all video frames to assign teams to players, with optional caching.
+        Assigns a team_id (1..n_teams) to every tracked player in every
+        frame, with caching per stub file (identical structure to the
+        original CLIP-based implementation).
         """
         player_assignment = read_stub(read_from_stub, stub_path)
-        if player_assignment is not None:
-            if len(player_assignment) == len(video_frames):
-                return player_assignment
+        if player_assignment is not None and len(player_assignment) == len(video_frames):
+            return player_assignment
 
-        self.load_model()
+        # Step 1: calibrate team color clusters from the first frame that
+        # has enough players detected to be representative of both teams.
+        calibration_colors = []
+        for frame_num, track in enumerate(player_tracks):
+            if len(track) < 2:
+                continue
+            for _, data in track.items():
+                color = self._dominant_jersey_color(self._get_jersey_pixels(video_frames[frame_num], data["bbox"]))
+                if color is not None:
+                    calibration_colors.append(color)
+            if len(calibration_colors) >= self.n_teams:
+                break
 
+        if len(calibration_colors) >= self.n_teams:
+            self._fit_team_clusters(np.array(calibration_colors))
+
+        # Step 2: assign every player in every frame, caching by player_id
+        # so a given track is only classified once (matches original
+        # behaviour, avoids flicker between team 1/2 frame to frame).
         player_assignment = []
-        for frame_num, player_track in enumerate(player_tracks):        
-            player_assignment.append({})
+        for frame_num, track in enumerate(player_tracks):
+            frame_assignment: Dict[int, int] = {}
 
-            if frame_num % 50 == 0:
-                self.player_team_dict = {}
+            for player_id, data in track.items():
+                if player_id in self.player_team_dict:
+                    frame_assignment[player_id] = self.player_team_dict[player_id]
+                    continue
 
-            for player_id, track in player_track.items():
-                team = self.get_player_team(
-                    video_frames[frame_num],   
-                    track['bbox'],
-                    player_id
-                )
-                player_assignment[frame_num][player_id] = team
+                if self.kmeans is None:
+                    frame_assignment[player_id] = 1
+                    continue
 
-        save_stub(stub_path, player_assignment)
+                color = self._dominant_jersey_color(self._get_jersey_pixels(video_frames[frame_num], data["bbox"]))
+                if color is None:
+                    frame_assignment[player_id] = 1
+                    continue
+
+                team_id = int(self.kmeans.predict([color])[0]) + 1
+                self.player_team_dict[player_id] = team_id
+                frame_assignment[player_id] = team_id
+
+            player_assignment.append(frame_assignment)
+
+        if stub_path:
+            save_stub(stub_path, player_assignment)
 
         return player_assignment

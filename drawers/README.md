@@ -1,27 +1,32 @@
 # 🖍️ Drawers
 
-This folder contains modules responsible for **visualizing tracking results** on video frames. These modules add intuitive and minimalistic overlays to help highlight players, the ball, and court landmarks in sports videos—especially for basketball analytics.
+Modules for visualizing tracking + tactical-view results on video frames.
+Ball/possession/pass drawers were removed (out of scope — see
+`PRD_CLAUDE_CODE.md`).
 
 ---
 
 ## 📁 Contents
 
-- `player_tracks_drawer.py`  
-  ➤ Draws elegant **ellipses** under each tracked player and overlays their unique **track ID** in a filled rectangle above their position.
+- `player_tracks_drawer.py`
+  ➤ Draws **ellipses** under each tracked player, team-colored, with their
+  **track ID** in a filled rectangle above their position.
 
-- `ball_tracks_drawer.py`  
-  ➤ Draws a **green triangle pointer** to indicate the detected position of the ball in each frame.
+- `court_keypoints_drawer.py`
+  ➤ Visualizes detected court keypoints (index-labelled circles). Rewritten
+  to consume the plain numpy array `CourtKeypointDetector` actually returns
+  (no longer depends on `supervision`).
 
-- `team_ball_control_drawer.py`  
-  ➤ Displays a **clean overlay box** on each frame showing **ball possession statistics** between the two teams over time. It calculates cumulative control percentages and updates them in real-time using distinct colors:  
-  - **Team 1**: Blue  
-  - **Team 2**: Crimson
+- `tactical_view_drawer.py`
+  ➤ Overlays the top-down tactical court image on the frame, with
+  team-colored dots for each player's transformed position. Ball-holder
+  highlighting and hardcoded per-player-ID debug logic (from the previous
+  scope) were removed.
 
-- `court_keypoints_drawer.py`  
-  ➤ Visualizes **keypoints** (e.g., court landmarks or reference points) on each video frame. Each point is marked with a red circle and a white label for easy interpretation.
-
-- `tactical_view_drawer.py`  
-  ➤ Overlays a **semi-transparent tactical court image** on the video frame to provide spatial context. You can place the overlay at a fixed position and control its transparency.
+- `frame_number_drawer.py`
+  ➤ Draws the current frame number — useful for QA'ing tracker/keypoint
+  output against the source video. Referenced by the original `main.py` but
+  never implemented; added here.
 
 ---
 
@@ -30,30 +35,21 @@ This folder contains modules responsible for **visualizing tracking results** on
 ```python
 from drawers import (
     PlayerTracksDrawer,
-    BallTracksDrawer,
-    TeamBallControlDrawer,
     CourtKeypointsDrawer,
-    TacticalViewDrawer
+    TacticalViewDrawer,
+    FrameNumberDrawer,
 )
 
-# Initialize drawers
 player_drawer = PlayerTracksDrawer()
-ball_drawer = BallTracksDrawer()
-team_control_drawer = TeamBallControlDrawer()
 court_drawer = CourtKeypointsDrawer()
 tactical_drawer = TacticalViewDrawer()
+frame_number_drawer = FrameNumberDrawer()
 
-# Step 1 (optional): Draw tactical court overlay
-court_overlay_frames = tactical_drawer.draw(video_frames, court_image_path="assets/court.png", width=300, height=160)
-
-# Step 2 (optional): Draw court keypoints
-keypoint_frames = court_drawer.draw(court_overlay_frames, court_keypoints)
-
-# Step 3: Draw player ellipses
-player_frames = player_drawer.draw(keypoint_frames, player_tracks, player_assignments, ball_acquisition)
-
-# Step 4: Draw ball triangle
-combined_frames = ball_drawer.draw(player_frames, ball_tracks)
-
-# Step 5: Overlay team ball possession percentages
-final_frames = team_control_drawer.draw(combined_frames, player_assignments, ball_acquisition)
+frames = player_drawer.draw(video_frames, player_tracks, player_assignment)
+frames = court_drawer.draw(frames, court_keypoints_per_frame)
+frames = frame_number_drawer.draw(frames)
+frames = tactical_drawer.draw(
+    frames, court_image_path, width, height,
+    key_points, tactical_player_positions, player_assignment,
+)
+```

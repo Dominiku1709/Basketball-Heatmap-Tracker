@@ -1,3 +1,26 @@
+# Runtime pipeline (main.py) — player detection, BoT-SORT tracking,
+# K-means team assignment, court keypoint detection, tactical view +
+# heatmap generation.
 ultralytics>=8.0.0
+lap>=0.5.12              # required by ultralytics' BoT-SORT/ByteTrack linear assignment (trackers.utils.matching)
+opencv-python-headless>=4.10.0  # >=4.10 wheels are built against the NumPy 2.x ABI; <4.10 crashes under numpy>=2 (see DISCOVERY_REPORT.md)
+imageio-ffmpeg>=0.5.0    # bundles a static ffmpeg with libx264 — opencv-python wheels ship without a working H.264 encoder, so StreamingVideoWriter shells out to this for browser-playable output video
+numpy>=1.26
+pandas>=2.0.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0        # composes per-player heatmap + player-crop-photo into one figure (heatmap/heatmap_generator.py)
+python-dotenv>=1.0.0    # loads PLAYER_WEIGHT_PATH / COURT_WEIGHT_PATH from .env (see .env.example)
+
+# ONNX export + runtime — scripts/export_onnx.py, scripts/benchmark_export.py,
+# and MODEL_FORMAT=onnx in .env (see configs/configs.py)
+onnx>=1.14.0
+onnxruntime>=1.17.0
+onnxslim>=0.1.82         # ultralytics' export pipeline auto-installs this anyway; pinned here so a fresh `pip install -r requirements.txt` doesn't need a second install mid-export
+
+# API service (api/app.py) — wraps pipeline.run_analysis() for the web demo.
+fastapi>=0.110.0
+uvicorn>=0.29.0
+python-multipart>=0.0.9  # required by FastAPI for UploadFile/File(...) form parsing
+
+# Training-only (training/*.py, *.ipynb) — not required to run main.py.
 roboflow
-python_version >=3.8

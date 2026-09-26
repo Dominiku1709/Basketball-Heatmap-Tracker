@@ -1,0 +1,59 @@
+# BoT-SORT tracker config for player tracking.
+#
+# Upgrade from plain ByteTrack (which the original repo used) to handle
+# continuous broadcast camera pan: gmc_method compensates for camera motion
+# before associating detections, and with_reid adds appearance matching so
+# players keep a stable ID through occlusion.
+#
+# Passed to `model.track(..., tracker="trackers/botsort.yaml")` in
+# trackers/player_tracker.py. Tune track_buffer/match_thresh against real
+# footage once the player detector weight is in place.
+
+tracker_type: botsort
+
+# Detection association thresholds (same defaults as ByteTrack's cascade)
+track_high_thresh: 0.5
+track_low_thresh: 0.1
+new_track_thresh: 0.6
+track_buffer: 60
+# 0.8 -> 0.9 (2026-09-18 experiment): loosened the primary IoU-cost reject
+# threshold (cost = 1-IoU) after finding a clean, unoccluded ID-switch case
+# (track 39->173 on video_6, 1-frame gap, near-identical bbox) where the
+# Kalman-predicted position must have drifted from the actual detection —
+# likely from fast-break movement + camera pan together. Tradeoff: also
+# makes it easier to wrongly match two DIFFERENT nearby players (the
+# same-jersey-teammate confusion case, e.g. track 97/100/101) — measure
+# both effects, don't assume this is a clean win.
+match_thresh: 0.9
+fuse_score: True
+
+# Camera Motion Compensation — estimates global camera movement between
+# frames (sparse optical flow) so track motion prediction isn't thrown off
+# by panning. This is the key fix for the ID-fragmentation problem noted
+# in DISCOVERY_REPORT.md / PRD.
+gmc_method: sparseOptFlow
+
+# BoT-SORT-specific: appearance (Re-ID) matching on top of motion/IoU, so a
+# player re-identified after occlusion keeps their original track_id instead
+# of spawning a new one.
+#
+# proximity_thresh 0.5 -> 0.6 and appearance_thresh 0.25 -> 0.30 (2026-09-18
+# experiment, same rationale as match_thresh above): proximity_thresh gates
+# whether appearance is even allowed to "rescue" a spatially-uncertain
+# match; raising it gives appearance more chances to kick in when motion
+# prediction has drifted. appearance_thresh is how similar the ReID
+# embedding must be to accept that rescue; loosened slightly so a genuine
+# same-person match isn't rejected. Same tradeoff as match_thresh: also
+# makes same-jersey-teammate mix-ups more likely, not just camera-pan
+# recovery.
+proximity_thresh: 0.6
+appearance_thresh: 0.30
+with_reid: True
+# auto -> yolo26n-reid.onnx (2026-09-19 experiment): `auto` is NOT a real
+# ReID model — it's a passthrough that reuses the detector's own backbone
+# features (never trained to discriminate people's appearance), which is
+# the likely reason loosening proximity_thresh/appearance_thresh above
+# only helped ~10% and didn't fix the clean, unoccluded ID-switch case.
+# yolo26n-reid.onnx is Ultralytics' own dedicated ReID checkpoint
+# (auto-downloaded from github.com/ultralytics/assets on first use).
+model: yolo26n-reid.onnx

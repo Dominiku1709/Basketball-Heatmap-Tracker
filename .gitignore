@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Model weights — large binaries, not committed (see README for how to obtain them)
+*.pt
+*.onnx
+
+# Local machine-specific config (weight paths etc.) — see .env.example
+.env
+
+# Pipeline cache / generated output — each run's video/heatmaps/run_info.json
+# land under output/run_N/ (see utils/run_utils.py); not committed.
+stubs/
+output/*
+uploads/
+
+# Exception: benchmark_export.json is real evidence cited in REPORT.md §7
+# (PyTorch vs ONNXRuntime latency numbers) — must stay committed even
+# though the rest of output/ is regenerated/gitignored. ("output/*", not
+# "output/", so git still descends into the dir to apply this negation.)
+!output/benchmark_export.json
+
+# Oversized sample video — 68MB, well past the other sample clips (4-10MB)
+# and close to GitHub's soft file-size warning; kept locally only.
+input_videos/video_4.mp4
+
+# Node / UI
+UI/node_modules/
+UI/dist/
+UI/.env
+UI/.env.local
+UI/npm-debug.log*
+
+# Training run artifacts (kept as zip for now, see training/README.md)
+*.zip
+training/result/
+
+# Course assignment brief — professor's material, not this project's own
+# output, not meant for the public repo.
+yeucau.docx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.~lock.*#

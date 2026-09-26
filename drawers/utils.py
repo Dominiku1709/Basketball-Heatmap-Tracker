@@ -1,13 +1,12 @@
 """
 draw_utils.py
 
-Drawing utilities for visualizing tracked objects (players and balls) on video frames.
-Includes anti-aliased ellipse drawing for player positions and triangle markers for ball detections.
+Drawing utilities for visualizing tracked players on video frames.
+Anti-aliased ellipse drawing for player positions + track ID label.
 """
 
 import cv2
 import sys
-import numpy as np
 
 sys.path.append("../")
 from utils import get_center_bbox, get_width_bbox
@@ -60,24 +59,5 @@ def draw_ellipse(frame, bbox, color, track_id=None):
             thickness=2,
             lineType=cv2.LINE_AA
         )
-
-    return frame
-
-
-def draw_triangle(frame, bbox, color):
-    """
-    Draw a filled triangle marker above the object (e.g., ball).
-    """
-    y = int(bbox[1])  # Top of the bbox
-    x, _ = get_center_bbox(bbox)
-
-    triangle = np.array([
-        [x, y],
-        [x - 10, y - 20],
-        [x + 10, y - 20]
-    ])
-
-    cv2.drawContours(frame, [triangle], 0, color, cv2.FILLED)
-    cv2.drawContours(frame, [triangle], 0, (0,0,0), 2)
 
     return frame

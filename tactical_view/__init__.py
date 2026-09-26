@@ -1,1 +1,1 @@
-from .tactical_view import TacticalView
+from .tactical_view import TacticalViewConverter
